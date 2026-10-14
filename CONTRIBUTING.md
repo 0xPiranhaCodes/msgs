@@ -22,7 +22,7 @@ explicitly changes them:
 
 - no central relay or elected host;
 - no message history sent to late joiners;
-- no messages, passphrases, identities, peers, or application logs persisted;
+- no messages, identities, peers, or application logs persisted;
 - bounded in-memory state and protocol frames;
 - transparent terminal backgrounds;
 - authenticated encryption for discovery and peer traffic.

@@ -61,7 +61,7 @@ fn render_header(frame: &mut Frame, area: Rect, model: &Model) {
             " msgs ",
             Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
         ),
-        Span::styled("encrypted VPN mesh", Style::default().fg(MUTED)),
+        Span::styled("encrypted network mesh", Style::default().fg(MUTED)),
         Span::raw("  "),
         Span::styled(
             format!("● {} online", model.peers.len() + 1),
@@ -175,7 +175,7 @@ fn render_conversation(frame: &mut Frame, area: Rect, model: &Model) {
         Paragraph::new(lines)
             .block(
                 Block::default()
-                    .title(" VPN ROOM ")
+                    .title(" ROOM ")
                     .borders(Borders::ALL)
                     .border_style(Style::default().fg(border)),
             )

@@ -5,9 +5,8 @@ use msgs::{
 };
 use std::time::Duration;
 use tokio::time::timeout;
-use zeroize::Zeroizing;
 
-fn config(id: u8, name: &str, passphrase: &str) -> MeshConfig {
+fn config(id: u8, name: &str, room_domain: &str) -> MeshConfig {
     MeshConfig {
         identity: Identity {
             name: name.into(),
@@ -15,7 +14,7 @@ fn config(id: u8, name: &str, passphrase: &str) -> MeshConfig {
         },
         id: InstanceId([id; 16]),
         port: 0,
-        keys: derive_room_keys(Zeroizing::new(passphrase.as_bytes().to_vec())).unwrap(),
+        keys: derive_room_keys(room_domain).unwrap(),
         seeds: vec![],
         multicast: false,
     }
@@ -23,11 +22,11 @@ fn config(id: u8, name: &str, passphrase: &str) -> MeshConfig {
 
 #[tokio::test]
 async fn peers_join_chat_leave_and_reconnect() {
-    let b = MeshHandle::spawn(config(2, "grace", "secret"))
+    let b = MeshHandle::spawn(config(2, "grace", "hackerearth.com"))
         .await
         .unwrap();
     let mut b_events = b.subscribe();
-    let mut a_config = config(1, "ada", "secret");
+    let mut a_config = config(1, "ada", "hackerearth.com");
     a_config.seeds.push(b.local_addr());
     let a = MeshHandle::spawn(a_config).await.unwrap();
     let mut a_events = a.subscribe();
@@ -41,19 +40,19 @@ async fn peers_join_chat_leave_and_reconnect() {
     a.shutdown();
     wait_for_leave(&mut b_events, "ada").await;
 
-    let mut a_config = config(1, "ada", "secret");
+    let mut a_config = config(1, "ada", "hackerearth.com");
     a_config.seeds.push(b.local_addr());
     let _replacement = MeshHandle::spawn(a_config).await.unwrap();
     wait_for_join(&mut b_events, "ada").await;
 }
 
 #[tokio::test]
-async fn wrong_passphrase_never_joins() {
-    let b = MeshHandle::spawn(config(2, "grace", "right"))
+async fn different_room_domain_never_joins() {
+    let b = MeshHandle::spawn(config(2, "grace", "hackerearth.com"))
         .await
         .unwrap();
     let mut b_events = b.subscribe();
-    let mut a_config = config(1, "ada", "wrong");
+    let mut a_config = config(1, "ada", "example.com");
     a_config.seeds.push(b.local_addr());
     let _a = MeshHandle::spawn(a_config).await.unwrap();
     assert!(timeout(Duration::from_millis(400), b_events.recv())
@@ -63,17 +62,17 @@ async fn wrong_passphrase_never_joins() {
 
 #[tokio::test]
 async fn seed_introduces_peers_without_replaying_history() {
-    let c = MeshHandle::spawn(config(3, "linus", "secret"))
+    let c = MeshHandle::spawn(config(3, "linus", "hackerearth.com"))
         .await
         .unwrap();
-    let mut b_config = config(2, "grace", "secret");
+    let mut b_config = config(2, "grace", "hackerearth.com");
     b_config.seeds.push(c.local_addr());
     let b = MeshHandle::spawn(b_config).await.unwrap();
     let mut b_events = b.subscribe();
     wait_for_join(&mut b_events, "linus").await;
 
     b.send(UserAction::Send("before".into())).await.unwrap();
-    let mut a_config = config(1, "ada", "secret");
+    let mut a_config = config(1, "ada", "hackerearth.com");
     a_config.seeds.push(b.local_addr());
     let a = MeshHandle::spawn(a_config).await.unwrap();
     let mut a_events = a.subscribe();

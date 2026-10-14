@@ -11,12 +11,14 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use rand::RngCore;
 use std::process::Command;
-use zeroize::Zeroizing;
 
 #[derive(Clone, Debug, Parser, PartialEq, Eq)]
-#[command(name = "msgs", about = "Ephemeral encrypted chat over your VPN")]
+#[command(
+    name = "msgs",
+    about = "Ephemeral encrypted chat over your local network"
+)]
 pub struct Options {
-    #[arg(long = "peer", value_name = "VPN-IP[:PORT]")]
+    #[arg(long = "peer", value_name = "NETWORK-IP[:PORT]")]
     pub peers: Vec<String>,
 
     #[arg(long, default_value_t = 45_873)]
@@ -60,12 +62,28 @@ pub fn load_system_git_identity() -> Result<Identity> {
     })
 }
 
+/// Everyone whose git email shares this room domain lands in the same room automatically — see
+/// the "Room domain" entry in `CONTEXT.md`. It is public (an employer's email domain), not a
+/// secret, so the only real access control is network reachability.
+pub fn room_domain(email: &str) -> Result<String> {
+    let domain = email
+        .split_once('@')
+        .map(|(_, domain)| domain)
+        .filter(|domain| !domain.is_empty())
+        .ok_or_else(|| {
+            anyhow!(
+                "git user.email {email:?} has no domain; \
+                 set it with `git config --global user.email you@company.example`"
+            )
+        })?;
+    Ok(domain.trim().to_lowercase())
+}
+
 pub async fn run(options: Options) -> Result<()> {
     let identity = load_system_git_identity()?;
     let seeds = parse_seeds(&options.peers)?;
-    let passphrase =
-        rpassword::prompt_password("Room passphrase: ").context("read room passphrase")?;
-    let keys = derive_room_keys(Zeroizing::new(passphrase.into_bytes()))?;
+    let domain = room_domain(&identity.email)?;
+    let keys = derive_room_keys(&domain)?;
     let mut id = [0_u8; 16];
     rand::rngs::OsRng.fill_bytes(&mut id);
     let mesh = MeshHandle::spawn(MeshConfig {
@@ -122,5 +140,21 @@ mod tests {
         })
         .unwrap_err();
         assert!(error.to_string().contains("git config --global user.name"));
+    }
+
+    #[test]
+    fn room_domain_is_lowercased_and_trimmed() {
+        assert_eq!(
+            room_domain("Ada@HackerEarth.com").unwrap(),
+            "hackerearth.com"
+        );
+        assert_eq!(room_domain(" ada@example.com ").unwrap(), "example.com");
+    }
+
+    #[test]
+    fn room_domain_rejects_missing_domain() {
+        let error = room_domain("ada").unwrap_err();
+        assert!(error.to_string().contains("git config --global user.email"));
+        assert!(room_domain("ada@").is_err());
     }
 }

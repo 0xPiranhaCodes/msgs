@@ -56,7 +56,7 @@ impl Model {
             peers: BTreeMap::new(),
             entries: VecDeque::new(),
             composer: String::new(),
-            status: "encrypted mesh ready".into(),
+            status: "joined room automatically".into(),
             scroll: 0,
             should_quit: false,
         }
