@@ -19,7 +19,7 @@ hkdf = "0.12"
 instability = "=0.3.9"
 postcard = { version = "1", features = ["alloc"] }
 rand = "0.8"
-ratatui = "0.29"
+ratatui = "0.30"
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.10"
 snow = "0.9"
