@@ -22,7 +22,7 @@ rand = "0.8"
 ratatui = "0.29"
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.10"
-snow = "0.9"
+snow = "0.10"
 socket2 = { version = "0.5", features = ["all"] }
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
